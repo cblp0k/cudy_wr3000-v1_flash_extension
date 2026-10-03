@@ -1,108 +1,98 @@
-![OpenWrt logo](include/logo.png)
+# Cudy WR3000 v1 · расширение SPI NOR до 128 МиБ
 
-OpenWrt Project is a Linux operating system targeting embedded devices. Instead
-of trying to create a single, static firmware, OpenWrt provides a fully
-writable filesystem with package management. This frees you from the
-application selection and configuration provided by the vendor and allows you
-to customize the device through the use of packages to suit any application.
-For developers, OpenWrt is the framework to build an application without having
-to build a complete firmware around it; for users this means the ability for
-full customization, to use the device in ways never envisioned.
+[![OpenWrt](https://img.shields.io/badge/OpenWrt-v24.10.4-00B5E2?logo=openwrt&logoColor=white)](https://github.com/openwrt/openwrt/tree/v24.10.4)
+![Устройство](https://img.shields.io/badge/Cudy-WR3000%20v1-34495E)
+![Flash](https://img.shields.io/badge/SPI%20NOR-128%20МиБ-2E8B57)
 
-Sunshine!
+Исходники OpenWrt для **Cudy WR3000 v1** после аппаратной замены штатной
+16-МиБ SPI NOR на 128-МиБ микросхему. Проект расширяет раздел `firmware`
+в дереве устройств, чтобы OpenWrt видел дополнительное пространство флеш-памяти.
 
-## Download
+> [!IMPORTANT]
+> Эта сборка предназначена для роутера **с уже заменённой 128-МиБ SPI NOR**.
+> Она не предназначена для WR3000 v1 со штатной 16-МиБ флеш-памятью и для
+> других моделей WR3000. Перед прошивкой проверьте модель устройства, размер
+> установленной микросхемы и возможность её адресации загрузчиком.
 
-Built firmware images are available for many architectures and come with a
-package selection to be used as WiFi home router. To quickly find a factory
-image usable to migrate from a vendor stock firmware to OpenWrt, try the
-*Firmware Selector*.
+## Что изменено
 
-* [OpenWrt Firmware Selector](https://firmware-selector.openwrt.org/)
+Основа — [OpenWrt v24.10.4](https://github.com/openwrt/openwrt/tree/v24.10.4),
+коммит `78b23a26c4c98938d549e7ff5876508544e33d4d`. В
+`target/linux/mediatek/dts/mt7981b-cudy-wr3000-v1.dts` изменён один
+параметр раздела `firmware`:
 
-If your device is supported, please follow the **Info** link to see install
-instructions or consult the support resources listed below.
+| | Штатная разметка | Этот проект |
+| --- | ---: | ---: |
+| Начало раздела | `0x000F0000` | `0x000F0000` |
+| Длина раздела | `0x00F10000` | `0x07E10000` |
+| Конец раздела | 16 МиБ (`0x01000000`) | 127 МиБ (`0x07F00000`) |
 
-## 
+Последний 1 МиБ 128-МиБ микросхемы остаётся за пределами раздела
+`firmware`. Второе значение в свойстве DTS `reg` — **длина раздела**,
+а не адрес его конца.
 
-An advanced user may require additional or specific package. (Toolchain, SDK, ...) For everything else than simple firmware download, try the wiki download page:
+Лимит размера **собираемого образа** в `filogic.mk` оставлен штатным:
+`IMAGE_SIZE := 15424k`. Расширение раздела и размер файла прошивки — разные
+величины.
 
-* [OpenWrt Wiki Download](https://openwrt.org/downloads)
+## Состояние проекта
 
-## Development
+По сообщению автора, собранная прошивка работает на WR3000 v1 с заменённой
+128-МиБ флеш-памятью. Этот репозиторий содержит исходники и конфигурацию
+сборки. Аппаратная замена микросхемы и изменения загрузчика в него не входят;
+загрузчик должен уметь обращаться к установленной флеш-памяти.
 
-To build your own firmware you need a GNU/Linux, BSD or macOS system (case
-sensitive filesystem required). Cygwin is unsupported because of the lack of a
-case sensitive file system.
+## Как собрать
 
-### Requirements
+Понадобятся Linux, [зависимости сборки OpenWrt](https://openwrt.org/docs/guide-developer/toolchain/install-buildsystem)
+и около 20 ГиБ свободного места для временных файлов.
 
-You need the following tools to compile OpenWrt, the package names vary between
-distributions. A complete list with distribution specific packages is found in
-the [Build System Setup](https://openwrt.org/docs/guide-developer/build-system/install-buildsystem)
-documentation.
-
+```sh
+git clone git@github.com:cblp0k/cudy_wr3000-v1_flash_extension.git
+cd cudy_wr3000-v1_flash_extension
+./scripts/feeds update -a
+./scripts/feeds install -a
+cp configs/cudy-wr3000-v1.config .config
+make defconfig
+make -j"$(nproc)" V=s
 ```
-binutils bzip2 diff find flex gawk gcc-6+ getopt grep install libc-dev libz-dev
-make4.1+ perl python3.7+ rsync subversion unzip which
+
+Готовые образы появятся в `bin/targets/mediatek/filogic/`. Для этой
+конфигурации ожидаются файлы
+`openwrt-mediatek-filogic-cudy_wr3000-v1-initramfs-kernel.bin` и
+`openwrt-mediatek-filogic-cudy_wr3000-v1-squashfs-sysupgrade.bin`.
+
+Файл [`configs/cudy-wr3000-v1.config`](configs/cudy-wr3000-v1.config)
+содержит сокращённую конфигурацию исходной сборки. Ревизии использованных
+тогда feeds записаны в [`configs/feeds.buildinfo`](configs/feeds.buildinfo).
+Команда `feeds update -a` получает их текущие версии; для точного повторения
+исходной сборки нужно выбрать ревизии из `feeds.buildinfo` до установки
+пакетов.
+
+Полный локальный `.config`, ключи подписи и другие личные данные в Git
+не добавляются. Параметр `CONFIG_BUSYBOX_DEFAULT_PASSWD=y` в развёрнутой
+конфигурации — это булева настройка BusyBox, а не значение пароля. Пароли
+устройства задавайте отдельно после установки.
+
+## Проверка на устройстве
+
+После установки на модифицированное устройство можно сверить размер флеш-памяти,
+раздел `firmware` и доступное место overlay:
+
+```sh
+dmesg | grep -i spi-nor
+cat /proc/mtd
+df -h /overlay
 ```
 
-### Quickstart
+Размер раздела `firmware` по этой DTS-разметке — `0x07E10000` байт
+(примерно 126 МиБ). Доступное место overlay зависит от фактического образа
+и состояния файловой системы. Порядок установки OpenWrt и способы восстановления
+устройства приведены на [странице Cudy WR3000 v1 в OpenWrt Wiki](https://openwrt.org/toh/cudy/wr3000_v1).
 
-1. Run `./scripts/feeds update -a` to obtain all the latest package definitions
-   defined in feeds.conf / feeds.conf.default
+## Основа и лицензии
 
-2. Run `./scripts/feeds install -a` to install symlinks for all obtained
-   packages into package/feeds/
-
-3. Run `make menuconfig` to select your preferred configuration for the
-   toolchain, target system & firmware packages.
-
-4. Run `make` to build your firmware. This will download all sources, build the
-   cross-compile toolchain and then cross-compile the GNU/Linux kernel & all chosen
-   applications for your target system.
-
-### Related Repositories
-
-The main repository uses multiple sub-repositories to manage packages of
-different categories. All packages are installed via the OpenWrt package
-manager called `opkg`. If you're looking to develop the web interface or port
-packages to OpenWrt, please find the fitting repository below.
-
-* [LuCI Web Interface](https://github.com/openwrt/luci): Modern and modular
-  interface to control the device via a web browser.
-
-* [OpenWrt Packages](https://github.com/openwrt/packages): Community repository
-  of ported packages.
-
-* [OpenWrt Routing](https://github.com/openwrt/routing): Packages specifically
-  focused on (mesh) routing.
-
-* [OpenWrt Video](https://github.com/openwrt/video): Packages specifically
-  focused on display servers and clients (Xorg and Wayland).
-
-## Support Information
-
-For a list of supported devices see the [OpenWrt Hardware Database](https://openwrt.org/supported_devices)
-
-### Documentation
-
-* [Quick Start Guide](https://openwrt.org/docs/guide-quick-start/start)
-* [User Guide](https://openwrt.org/docs/guide-user/start)
-* [Developer Documentation](https://openwrt.org/docs/guide-developer/start)
-* [Technical Reference](https://openwrt.org/docs/techref/start)
-
-### Support Community
-
-* [Forum](https://forum.openwrt.org): For usage, projects, discussions and hardware advise.
-* [Support Chat](https://webchat.oftc.net/#openwrt): Channel `#openwrt` on **oftc.net**.
-
-### Developer Community
-
-* [Bug Reports](https://bugs.openwrt.org): Report bugs in OpenWrt
-* [Dev Mailing List](https://lists.openwrt.org/mailman/listinfo/openwrt-devel): Send patches
-* [Dev Chat](https://webchat.oftc.net/#openwrt-devel): Channel `#openwrt-devel` on **oftc.net**.
-
-## License
-
-OpenWrt is licensed under GPL-2.0
+Проект основан на [OpenWrt](https://github.com/openwrt/openwrt).
+Оригинальный вводный документ сохранён как
+[`README.openwrt.md`](README.openwrt.md). Условия лицензирования исходных
+файлов указаны в [`COPYING`](COPYING), `LICENSES/` и заголовках файлов.
