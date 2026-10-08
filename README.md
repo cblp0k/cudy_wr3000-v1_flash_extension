@@ -1,97 +1,106 @@
-# Cudy WR3000 v1 · расширение SPI NOR до 128 МиБ
+**en** | [ru](README.ru.md)
+
+# Cudy WR3000 v1 · SPI NOR expansion to 128 MiB
 
 [![OpenWrt](https://img.shields.io/badge/OpenWrt-v24.10.4-00B5E2?logo=openwrt&logoColor=white)](https://github.com/openwrt/openwrt/tree/v24.10.4)
-![Устройство](https://img.shields.io/badge/Cudy-WR3000%20v1-34495E)
-![Flash](https://img.shields.io/badge/SPI%20NOR-128%20МиБ-2E8B57)
+![Device](https://img.shields.io/badge/Cudy-WR3000%20v1-34495E)
+![Flash](https://img.shields.io/badge/SPI%20NOR-128%20MiB-2E8B57)
 
-Исходники OpenWrt для **Cudy WR3000 v1** после аппаратной замены штатной
-16-МиБ SPI NOR на 128-МиБ микросхему. Проект расширяет раздел `firmware`
-в дереве устройств, чтобы OpenWrt видел дополнительное пространство флеш-памяти.
+OpenWrt sources for **Cudy WR3000 v1** after replacing the stock
+16 MiB SPI NOR chip with a 128 MiB chip. The project expands the `firmware` partition
+in the device tree so that OpenWrt can access the additional flash space.
 
 > [!IMPORTANT]
-> Эта сборка предназначена для роутера **с уже заменённой 128-МиБ SPI NOR**.
-> Она не предназначена для WR3000 v1 со штатной 16-МиБ флеш-памятью и для
-> других моделей WR3000. Перед прошивкой проверьте модель устройства, размер
-> установленной микросхемы и возможность её адресации загрузчиком.
+> This build is intended for a router **already upgraded to 128 MiB SPI NOR**.
+> It is not intended for a WR3000 v1 with the stock 16 MiB flash or for
+> other WR3000 models. Before flashing, check the device model, the capacity
+> of the installed chip, and whether the bootloader can address it.
 
-## Аппаратная замена флеш-памяти
+## Flash memory hardware upgrade
 
-В устройстве автора штатная **XMC XM25QH128C** заменена на
-**Winbond W25Q01JVZEIQ**. Объём SPI NOR увеличен **в восемь раз**:
-с 16 МиБ до 128 МиБ.
+On the author's device, the stock **XMC XM25QH128C** was replaced with
+a **Winbond W25Q01JVZEIQ**. The SPI NOR capacity increased **eightfold**:
+from 16 MiB to 128 MiB.
 
-| Параметр | Штатная память | Установленная замена |
+| Parameter | Stock memory | Installed replacement |
 | --- | --- | --- |
-| Производитель | XMC | Winbond |
-| Микросхема | XM25QH128C | W25Q01JVZEIQ |
-| Ёмкость | 128 Мбит / 16 МиБ | 1 Гбит / 128 МиБ |
-| Корпус | SOP-8, 208 mil | WSON-8, 8 × 6 мм, код `ZE` |
-| Контакты | 8 выступающих выводов | 8 площадок снизу |
-| Шаг контактов | 1,27 мм | 1,27 мм |
-| Диапазон питания | 2,3–3,6 В | 2,7–3,6 В |
+| Manufacturer | XMC | Winbond |
+| Chip | XM25QH128C | W25Q01JVZEIQ |
+| Capacity | 128 Mbit / 16 MiB | 1 Gbit / 128 MiB |
+| Package | SOP-8, 208 mil | WSON-8, 8 × 6 mm, code `ZE` |
+| Contacts | 8 protruding leads | 8 pads on the underside |
+| Contact pitch | 1.27 mm | 1.27 mm |
+| Supply voltage range | 2.3–3.6 V | 2.7–3.6 V |
 
-Исходная модель и объём подтверждены сохранённым журналом Linux:
-`spi-nor spi0.0: XM25QH128C (16384 Kbytes)`. После замены U-Boot определяет
+The original model and capacity are confirmed by a saved Linux log:
+`spi-nor spi0.0: XM25QH128C (16384 Kbytes)`. After replacement, U-Boot reports
 `SF: Detected w25q01jv with page size 256 Bytes, erase size 4 KiB, total 128 MiB`.
-Полный артикул установленной Winbond подтверждён автором переделки.
-Корпус штатной XMC указан по [фотографии платы WR3000 v1 из материалов
-сертификации](https://fccid.io/2APRGRT02/Internal-Photos/Internal-photos-6580975):
-в журнале Linux суффикс корпуса не отображается.
+The full part number of the installed Winbond chip was confirmed by the person who performed the upgrade.
+The stock XMC package was identified from a [WR3000 v1 board photo in the
+certification documents](https://fccid.io/2APRGRT02/Internal-Photos/Internal-photos-6580975):
+the Linux log does not show the package suffix.
 
-Корпуса **разные**: SOP-8 имеет выступающие выводы, а WSON-8 — контактные
-площадки на нижней стороне корпуса. Это не помешало успешно выполнить
-аппаратный апгрейд на устройстве автора. У рассматриваемых восьмиконтактных
-исполнений совпадают шаг контактов и номера сигналов SPI/Quad SPI:
+The packages are **different**: SOP-8 has protruding leads, while WSON-8 has contact
+pads on the underside. This did not prevent a successful
+hardware upgrade on the author's device. The eight-contact variants discussed here
+have matching contact pitch and SPI/Quad SPI signal assignments:
 `1 — /CS`, `2 — DO/IO1`, `3 — IO2`, `4 — GND`, `5 — DI/IO0`,
-`6 — CLK`, `7 — IO3`, `8 — VCC`; диапазоны питания также пересекаются.
-При этом совпадение сигналов и шага не означает одинаковых посадочных мест:
-возможность монтажа зависит от площадок и свободного пространства конкретной
-платы. Результат этой переделки не является гарантией взаимозаменяемости
-SOP-8 и WSON-8 на любых устройствах.
+`6 — CLK`, `7 — IO3`, `8 — VCC`; their supply voltage ranges also overlap.
+However, matching signals and pitch do not mean identical PCB footprints:
+whether the chip can be mounted depends on the pads and available space on the specific
+board. This upgrade does not guarantee that
+SOP-8 and WSON-8 are interchangeable on all devices.
 
-У Winbond варианта `IQ` бит Quad Enable (QE) фиксирован в единице, а функция
-`/HOLD` отключена. Совпадение SPI-сигналов не означает полной идентичности
-всех дополнительных функций контактов. Для использования объёма свыше
-16 МиБ загрузчик и драйвер должны поддерживать адресацию установленной
-микросхемы; расширение раздела OpenWrt описано ниже.
+On the Winbond `IQ` variant, the Quad Enable (QE) bit is fixed at one, and the
+`/HOLD` function is disabled. Matching SPI signals do not mean that
+all additional pin functions are identical. To use capacities above
+16 MiB, the bootloader and driver must support addressing the installed
+chip; the OpenWrt partition expansion is described below.
 
-Характеристики сверены с даташитами **XM25QH128C Rev. 2.1**
-(25 апреля 2023 года, распиновка — стр. 8, корпус SOP-8 — стр. 97) и
-**W25Q01JV Rev. B1** (13 ноября 2019 года, распиновка — стр. 7,
-корпус WSON-8 — стр. 87, полный артикул — стр. 91). Дополнительные источники:
+The specifications were checked against the **XM25QH128C Rev. 2.1** datasheet
+(April 25, 2023, pinout — p. 8, SOP-8 package — p. 97) and
+**W25Q01JV Rev. B1** (November 13, 2019, pinout — p. 7,
+WSON-8 package — p. 87, full part number — p. 91). Additional sources:
 
-- [Характеристики XM25QH128C на сайте XMC](https://www.xmcwh.com/en/site/product_con/202).
-- [Официальный каталог Winbond 2025, стр. 23](https://www.winbond.com/export/sites/winbond/product-selection-guide/file/2025-Product-Selection-Guide-Winbond-Code-Storage-Flash-Memory.pdf#page=27):
-  артикул `W25Q01JVZEIQ`, корпус WSON-8 8 × 6 мм и ёмкость 1 Гбит.
-- [Даташит Winbond W25Q01JV Rev. E](https://www.mouser.com/datasheet/2/949/Winbond_Electronics_Corporation_09_06_2024_W25Q01J-3501286.pdf):
-  стр. 5 — распиновка, стр. 81 — корпус, стр. 84–85 — заказ и маркировка.
-  На корпусе `W25Q01JVZEIQ` используется сокращённая маркировка `25Q01JVIQ`.
+- [XM25QH128C specifications on the XMC website](https://www.xmcwh.com/en/site/product_con/202).
+- [Official Winbond 2025 catalog, p. 23](https://www.winbond.com/export/sites/winbond/product-selection-guide/file/2025-Product-Selection-Guide-Winbond-Code-Storage-Flash-Memory.pdf#page=27):
+  part number `W25Q01JVZEIQ`, WSON-8 8 × 6 mm package, and 1 Gbit capacity.
+- [Winbond W25Q01JV Rev. E datasheet](https://www.mouser.com/datasheet/2/949/Winbond_Electronics_Corporation_09_06_2024_W25Q01J-3501286.pdf):
+  p. 5 — pinout, p. 81 — package, pp. 84–85 — ordering and marking.
+  The `W25Q01JVZEIQ` package uses the abbreviated marking `25Q01JVIQ`.
 
-## Что изменено
+## Changes
 
-Основа — [OpenWrt v24.10.4](https://github.com/openwrt/openwrt/tree/v24.10.4),
-коммит `78b23a26c4c98938d549e7ff5876508544e33d4d`. В
-`target/linux/mediatek/dts/mt7981b-cudy-wr3000-v1.dts` изменён один
-параметр раздела `firmware`:
+The change was tested on **OpenWrt 24.10.4** for **Cudy WR3000 v1** after
+replacing the flash memory with a 128 MiB Winbond W25Q01JVZEIQ.
 
-| | Штатная разметка | Этот проект |
+You can try applying it to any other OpenWrt version that supports
+this router. Before building, check the partition layout and support for
+the new memory. The change has not yet been tested on other versions.
+
+Based on [OpenWrt v24.10.4](https://github.com/openwrt/openwrt/tree/v24.10.4),
+commit `78b23a26c4c98938d549e7ff5876508544e33d4d`. In
+`target/linux/mediatek/dts/mt7981b-cudy-wr3000-v1.dts`, one
+parameter of the `firmware` partition was changed:
+
+| | Stock layout | This project |
 | --- | ---: | ---: |
-| Начало раздела | `0x000F0000` | `0x000F0000` |
-| Длина раздела | `0x00F10000` | `0x07E10000` |
-| Конец раздела | 16 МиБ (`0x01000000`) | 127 МиБ (`0x07F00000`) |
+| Partition start | `0x000F0000` | `0x000F0000` |
+| Partition length | `0x00F10000` | `0x07E10000` |
+| Partition end | 16 MiB (`0x01000000`) | 127 MiB (`0x07F00000`) |
 
-Последний 1 МиБ 128-МиБ микросхемы остаётся за пределами раздела
-`firmware`. Второе значение в свойстве DTS `reg` — **длина раздела**,
-а не адрес его конца.
+The last 1 MiB of the 128 MiB chip remains outside the
+`firmware` partition. The second value in the DTS `reg` property is the **partition length**,
+not its end address.
 
-Лимит размера **собираемого образа** в `filogic.mk` оставлен штатным:
-`IMAGE_SIZE := 15424k`. Расширение раздела и размер файла прошивки — разные
-величины.
+The size limit for the **built image** in `filogic.mk` remains at its stock value:
+`IMAGE_SIZE := 15424k`. Partition expansion and firmware file size are different
+quantities.
 
-## Как собрать
+## How to build
 
-Понадобятся Linux, [зависимости сборки OpenWrt](https://openwrt.org/docs/guide-developer/toolchain/install-buildsystem)
-и около 20 ГиБ свободного места для временных файлов.
+You will need Linux, the [OpenWrt build dependencies](https://openwrt.org/docs/guide-developer/toolchain/install-buildsystem),
+and about 20 GiB of free space for temporary files.
 
 ```sh
 git clone git@github.com:cblp0k/cudy_wr3000-v1_flash_extension.git
@@ -103,27 +112,27 @@ make defconfig
 make -j"$(nproc)" V=s
 ```
 
-Готовые образы появятся в `bin/targets/mediatek/filogic/`. Для этой
-конфигурации ожидаются файлы
-`openwrt-mediatek-filogic-cudy_wr3000-v1-initramfs-kernel.bin` и
+The built images will appear in `bin/targets/mediatek/filogic/`. This
+configuration is expected to produce
+`openwrt-mediatek-filogic-cudy_wr3000-v1-initramfs-kernel.bin` and
 `openwrt-mediatek-filogic-cudy_wr3000-v1-squashfs-sysupgrade.bin`.
 
-Файл [`configs/cudy-wr3000-v1.config`](configs/cudy-wr3000-v1.config)
-содержит сокращённую конфигурацию исходной сборки. Ревизии использованных
-тогда feeds записаны в [`configs/feeds.buildinfo`](configs/feeds.buildinfo).
-Команда `feeds update -a` получает их текущие версии; для точного повторения
-исходной сборки нужно выбрать ревизии из `feeds.buildinfo` до установки
-пакетов.
+The [`configs/cudy-wr3000-v1.config`](configs/cudy-wr3000-v1.config) file
+contains the reduced configuration of the original build. The feed revisions used
+at that time are recorded in [`configs/feeds.buildinfo`](configs/feeds.buildinfo).
+The `feeds update -a` command retrieves their current versions; to reproduce
+the original build exactly, select the revisions from `feeds.buildinfo` before installing
+packages.
 
-Полный локальный `.config`, ключи подписи и другие личные данные в Git
-не добавляются. Параметр `CONFIG_BUSYBOX_DEFAULT_PASSWD=y` в развёрнутой
-конфигурации — это булева настройка BusyBox, а не значение пароля. Пароли
-устройства задавайте отдельно после установки.
+The full local `.config`, signing keys, and other personal data are not added to
+Git. The `CONFIG_BUSYBOX_DEFAULT_PASSWD=y` option in the expanded
+configuration is a boolean BusyBox setting, not a password value. Set the
+device passwords separately after installation.
 
-## Проверка на устройстве
+## Verification on the device
 
-После установки на модифицированное устройство можно сверить размер флеш-памяти,
-раздел `firmware` и доступное место overlay:
+After installation on the modified device, you can check the flash capacity,
+the `firmware` partition, and the available overlay space:
 
 ```sh
 dmesg | grep -i spi-nor
@@ -131,14 +140,14 @@ cat /proc/mtd
 df -h /overlay
 ```
 
-Размер раздела `firmware` по этой DTS-разметке — `0x07E10000` байт
-(примерно 126 МиБ). Доступное место overlay зависит от фактического образа
-и состояния файловой системы. Порядок установки OpenWrt и способы восстановления
-устройства приведены на [странице Cudy WR3000 v1 в OpenWrt Wiki](https://openwrt.org/toh/cudy/wr3000_v1).
+The `firmware` partition size in this DTS layout is `0x07E10000` bytes
+(approximately 126 MiB). Available overlay space depends on the actual image
+and the state of the filesystem. OpenWrt installation instructions and device recovery
+methods are provided on the [Cudy WR3000 v1 page in the OpenWrt Wiki](https://openwrt.org/toh/cudy/wr3000_v1).
 
-## Основа и лицензии
+## Upstream project and licenses
 
-Проект основан на [OpenWrt](https://github.com/openwrt/openwrt).
-Оригинальный вводный документ сохранён как
-[`README.openwrt.md`](README.openwrt.md). Условия лицензирования исходных
-файлов указаны в [`COPYING`](COPYING), `LICENSES/` и заголовках файлов.
+The project is based on [OpenWrt](https://github.com/openwrt/openwrt).
+The original introductory document is preserved as
+[`README.openwrt.md`](README.openwrt.md). The licensing terms for the source
+files are listed in [`COPYING`](COPYING), `LICENSES/`, and the file headers.
